@@ -21,6 +21,7 @@ class MainActivity : AppCompatActivity() {
     lateinit var convertButton: Button
     lateinit var getDataOfJSON: CurrencyConverter
     private var selectedCurr: Float? = null
+    private var input: String = ""
     lateinit var resultView: TextView
     lateinit var appAlert: ConstraintLayout
 
@@ -43,40 +44,6 @@ class MainActivity : AppCompatActivity() {
         resultView = findViewById(R.id.tvResult)
         appAlert = findViewById(R.id.mainXml)
 
-        //------------------------------------------------------------------------------------------ prepare for API
-        val apiInterface = APIClient().getClient()?.create(APIInterface::class.java) //required
-        val call: Call<CurrencyConverter?>? = apiInterface!!.doGetListResources() //return targeted object class details
-        Log.d("MainActivity", "Error1---------------------------------------")
-        //------------------------------------------------------------------------------------------ API handler - start
-        call?.enqueue(object : Callback<CurrencyConverter?> {
-            override fun onResponse(
-                call: Call<CurrencyConverter?>?, // set the targeted object
-                response: Response<CurrencyConverter?> // set the targeted object
-            ) {
-                //get the data from JSON object here
-                getDataOfJSON = response.body()!!
-
-                try {
-                    date = getDataOfJSON.date.toString()
-                    inr = getDataOfJSON.eur?.inr
-                    usd = getDataOfJSON.eur?.usd
-                    aud = getDataOfJSON.eur?.aud
-                    sar = getDataOfJSON.eur?.sar
-                    cny = getDataOfJSON.eur?.cny
-                    jpy = getDataOfJSON.eur?.jpy
-                }catch (e: Exception){
-                    Log.d("MainActivity", "API Data retrieve ERROR")
-                }
-            }
-
-            override fun onFailure(call: Call<CurrencyConverter?>, t: Throwable?) { //required to check if there is failure
-                call.cancel()
-            }
-
-        })
-
-        //------------------------------------------------------------------------------------------ API handler - end
-        Log.d("MainActivity", "$selectedCurr Error3---------------------------------------")
 
         //------------------------------------------------------------------------------------------Handle Spinner
         //retrive the string array from String file
@@ -87,53 +54,62 @@ class MainActivity : AppCompatActivity() {
                 android.R.layout.simple_spinner_item, Currency
             )
             spinner.adapter = adapter
-
             spinner.onItemSelectedListener = object :
                 AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long) {
                     //write handle process
-                    try {
-                        when(position){
-                            0 -> selectedCurr = inr
-                            1 -> selectedCurr = usd
-                            2 -> selectedCurr = aud
-                            3 -> selectedCurr = sar
-                            4 -> selectedCurr = cny
-                            5 -> selectedCurr = jpy
-                            else -> {
-                                Snackbar.make(appAlert, "Select Currency!", Snackbar.LENGTH_LONG).show()
-                            }
-                        }
-
-                    }catch (e: Exception){
-                        Log.d("MainActivity", "Error4---------------------------------------")
-                    }
-
+                    callJSON(position)
                 }
-
                 override fun onNothingSelected(parent: AdapterView<*>) {
                     Snackbar.make(appAlert, "Default currency select: inr!!", Snackbar.LENGTH_LONG).show()
-                    selectedCurr = inr
                 }
             }
         }
-
         convertButton.setOnClickListener { convertCurrency() }
     }
 
     fun convertCurrency(){
-        var input = userInput.text.toString()
-        Log.d("MainActivity", "$input Error5---------------------------------------")
-
         var inputFloat: Float = 0.0f
+        input = userInput.text.toString()
         try {
-            inputFloat =  input.toFloat()
+            inputFloat = input.toFloat()
         }catch (e: Exception){
             Log.d("MainActivity", "Convert to flout error")
         }
-        var result: Float = inputFloat!! * selectedCurr!!
+        var result: Float = inputFloat * selectedCurr!!
         resultView.setText(result.toString())
         dateView.setText("Date: $date")
-
     }
+
+    fun callJSON(index: Int){
+        //------------------------------------------------------------------------------------------ prepare for API
+        val apiInterface = APIClient().getClient()?.create(APIInterface::class.java) //required
+        val call: Call<CurrencyConverter?>? = apiInterface!!.doGetListResources() //return targeted object class details
+
+        //------------------------------------------------------------------------------------------ API handler - start
+        call?.enqueue(object : Callback<CurrencyConverter?> {
+            override fun onResponse(
+                call: Call<CurrencyConverter?>?, // set the targeted object
+                response: Response<CurrencyConverter?> // set the targeted object
+            ) {
+                //get the data from JSON object here
+                getDataOfJSON = response.body()!!
+                date = getDataOfJSON.date.toString()
+
+                when(index){
+                    0 -> selectedCurr = getDataOfJSON.eur?.inr
+                    1 -> selectedCurr = getDataOfJSON.eur?.usd
+                    2 -> selectedCurr = getDataOfJSON.eur?.aud
+                    3 -> selectedCurr = getDataOfJSON.eur?.sar
+                    4 -> selectedCurr = getDataOfJSON.eur?.cny
+                    5 -> selectedCurr = getDataOfJSON.eur?.jpy
+                    else -> selectedCurr = getDataOfJSON.eur?.inr
+                }
+            }
+            override fun onFailure(call: Call<CurrencyConverter?>, t: Throwable?) { //required to check if there is failure
+                call.cancel()
+            }
+        })
+    }
+
 }
